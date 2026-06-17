@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Duel Complices 🎯</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #0f0f1a;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 10px;
+  }
+  .app {
+    width: 100%; max-width: 430px;
+    background: #16213e;
+    border-radius: 28px; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+    min-height: 620px; display: flex; flex-direction: column;
+  }
+  .header {
+    background: linear-gradient(135deg, #6d28d9, #a855f7);
+    padding: 16px 20px 12px; text-align: center; position: relative;
+  }
+  .header h1 { font-size: 20px; font-weight: 900; color: white; }
+  .header p  { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+  .room-badge {
+    position: absolute; top: 14px; right: 12px;
+    background: rgba(255,255,255,0.2); border-radius: 20px;
+    padding: 4px 10px; font-size: 11px; font-weight: 900; color: white;
+  }
+  .screen { display: none; flex-direction: column; flex: 1; padding: 22px 18px; gap: 14px; }
+  .screen.active { display: flex; }
+  h2 { font-size: 22px; font-weight: 900; color: white; text-align: center; }
+  .big-emoji { font-size: 50px; text-align: center; }
+  .lbl { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 6px; display: block; }
+  input, select {
+    width: 100%; background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.1); border-radius: 14px;
+    padding: 12px 14px; color: white; font-size: 15px; font-weight: 700;
+    font-family: 'Nunito', sans-serif; outline: none;
+  }
+  input:focus, select:focus { border-color: #a855f7; }
+  input::placeholder { color: rgba(255,255,255,0.25); }
+  select option { background: #16213e; }
+  .btn {
+    border: none; border-radius: 16px; padding: 15px;
+    color: white; font-size: 15px; font-weight: 900;
+    font-family: 'Nunito', sans-serif; cursor: pointer;
+    transition: opacity .2s; width: 100%; text-align: center;
+  }
+  .btn-p { background: linear-gradient(135deg, #6d28d9, #a855f7); }
+  .btn-s { background: rgba(255,255,255,0.07); border: 2px solid rgba(255,255,255,0.15); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn:hover:not(:disabled) { opacity: .88; }
+  .info { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); border-radius: 14px; padding: 14px; font-size: 13px; color: rgba(255,255,255,0.6); text-align: center; line-height: 1.6; }
+  .warn { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); border-radius: 14px; padding: 14px; font-size: 13px; color: rgba(251,191,36,0.9); line-height: 1.6; }
+  .err  { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 14px; padding: 12px; font-size: 13px; color: #fca5a5; text-align: center; }
+  /* Setup steps */
+  .step { display: flex; gap: 12px; align-items: flex-start; }
+  .step-num { background: #6d28d9; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; margin-top: 2px; }
+  .step-txt { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+  .step-txt b { color: white; }
+  /* Progress */
+  .bar-wrap { background: rgba(255,255,255,0.08); border-radius: 99px; height: 6px; overflow: hidden; }
+  .bar-fill  { height: 100%; background: linear-gradient(90deg,#6d28d9,#a855f7); border-radius: 99px; transition: width .4s ease; }
+  .q-ctr { font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.4); text-align: right; margin-top: 4px; }
+  .q-cat { font-size: 10px; font-weight: 900; color: #a855f7; text-transform: uppercase; text-align: center; letter-spacing: 1px; }
+  .q-box { background: rgba(255,255,255,0.06); border-radius: 18px; padding: 18px; font-size: 17px; font-weight: 800; color: white; text-align: center; line-height: 1.4; min-height: 80px; display: flex; align-items: center; justify-content: center; }
+  .choices { display: flex; flex-direction: column; gap: 10px; }
+  .choice { background: rgba(255,255,255,0.07); border: 2px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 13px 15px; color: white; font-size: 14px; font-weight: 700; font-family: 'Nunito',sans-serif; cursor: pointer; transition: all .2s; text-align: left; width: 100%; }
+  .choice:hover  { background: rgba(168,85,247,0.2); border-color: #a855f7; }
+  .choice.sel    { background: rgba(168,85,247,0.3); border-color: #a855f7; }
+  /* Waiting */
+  .wait-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(251,191,36,0.3); border-radius: 18px; padding: 18px; text-align: center; }
+  .dot { width: 10px; height: 10px; background: #fbbf24; border-radius: 50%; display: inline-block; margin-right: 8px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+  /* Code display */
+  .code-box { text-align: center; background: rgba(168,85,247,0.12); border: 2px dashed #a855f7; border-radius: 18px; padding: 18px; }
+  .code-val { font-size: 38px; font-weight: 900; color: white; letter-spacing: 6px; }
+  /* Results */
+  .score-hero { background: linear-gradient(135deg,#6d28d9,#a855f7); border-radius: 20px; padding: 22px; text-align: center; }
+  .score-big  { font-size: 52px; font-weight: 900; color: white; line-height: 1; }
+  .score-sub  { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+  .score-verd { font-size: 17px; font-weight: 800; color: white; margin-top: 10px; }
+  .tabs { display: flex; gap: 8px; }
+  .tab { flex: 1; padding: 10px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 13px; font-weight: 800; font-family: 'Nunito',sans-serif; cursor: pointer; transition: all .2s; }
+  .tab.on { background: rgba(168,85,247,0.3); border-color: #a855f7; color: #e9d5ff; }
+  .scores-grid { display: flex; gap: 10px; }
+  .score-card { flex: 1; background: rgba(255,255,255,0.06); border-radius: 16px; padding: 14px; text-align: center; }
+  .score-card .lbl { text-align: center; margin-bottom: 6px; }
+  .score-card .val { font-size: 28px; font-weight: 900; color: white; }
+  .score-card .sub { font-size: 11px; color: rgba(255,255,255,0.4); }
+  .cmp-header { display: flex; gap: 6px; margin-bottom: 8px; }
+  .cmp-col { flex: 1; text-align: center; font-size: 11px; font-weight: 900; color: rgba(255,255,255,0.4); text-transform: uppercase; }
+  .cmp-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; padding-right: 2px; }
+  .cmp-list::-webkit-scrollbar { width: 4px; }
+  .cmp-list::-webkit-scrollbar-thumb { background: #6d28d9; border-radius: 4px; }
+  .cmp-item { background: rgba(255,255,255,0.05); border-radius: 14px; padding: 11px; }
+  .cmp-q { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 7px; }
+  .cmp-row { display: flex; gap: 6px; align-items: center; }
+  .cmp-ans { flex: 1; border-radius: 10px; padding: 7px 9px; font-size: 12px; font-weight: 700; text-align: center; line-height: 1.3; }
+  .cmp-ans.ok  { background: rgba(34,197,94,.2); border:1px solid rgba(34,197,94,.4); color:#86efac; }
+  .cmp-ans.no  { background: rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.3); color:#fca5a5; }
+  .cmp-icon { font-size: 16px; flex-shrink: 0; }
+  /* Config screen */
+  .config-input { font-size: 12px; font-family: monospace; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>🎯 Duel Complices</h1>
+    <p>Qui te connaît le mieux ?</p>
+    <div class="room-badge" id="roomBadge" style="display:none"></div>
+  </div>
+
+
+
+  <!-- ══ SCREEN: HOME ══ -->
+  <div class="screen" id="sHome">
+    <div class="big-emoji">🎮</div>
+    <h2>Prêt à jouer ?</h2>
+    <p style="text-align:center;color:rgba(255,255,255,0.5);font-size:14px;">Crée une partie ou rejoins ton complice pour voir qui vous vous connaissez le mieux !</p>
+    <button class="btn btn-p" onclick="go('sCreate')">✨ Créer une partie</button>
+    <button class="btn btn-s" onclick="go('sJoin')">🔗 Rejoindre une partie</button>
+    <div class="info">200+ questions • Voir les réponses de l'autre • Multi-appareils ✅</div>
+
+  </div>
+
+  <!-- ══ SCREEN: CREATE ══ -->
+  <div class="screen" id="sCreate">
+    <div class="big-emoji">🆕</div>
+    <h2>Nouvelle partie</h2>
+    <div>
+      <label class="lbl">Ton prénom</label>
+      <input type="text" id="createName" placeholder="Ex: Léa" maxlength="20">
+    </div>
+    <div>
+      <label class="lbl">Nombre de questions</label>
+      <select id="qCount">
+        <option value="5">5 questions (rapide)</option>
+        <option value="10" selected>10 questions</option>
+        <option value="15">15 questions</option>
+        <option value="20">20 questions</option>
+      </select>
+    </div>
+    <button class="btn btn-p" onclick="createGame()">🚀 Créer la partie</button>
+    <button class="btn btn-s" onclick="go('sHome')">← Retour</button>
+    <div id="createErr" class="err" style="display:none"></div>
+  </div>
+
+  <!-- ══ SCREEN: JOIN ══ -->
+  <div class="screen" id="sJoin">
+    <div class="big-emoji">🔑</div>
+    <h2>Rejoindre</h2>
+    <div>
+      <label class="lbl">Ton prénom</label>
+      <input type="text" id="joinName" placeholder="Ex: Sad" maxlength="20">
+    </div>
+    <div>
+      <label class="lbl">Code de la partie</label>
+      <input type="text" id="joinCode" placeholder="Ex: A3B7K2" maxlength="6" style="text-transform:uppercase;letter-spacing:3px;" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <button class="btn btn-p" onclick="joinGame()">🎮 Rejoindre</button>
+    <button class="btn btn-s" onclick="go('sHome')">← Retour</button>
+    <div id="joinErr" class="err" style="display:none"></div>
+  </div>
+
+  <!-- ══ SCREEN: LOBBY ══ -->
+  <div class="screen" id="sLobby">
+    <div class="big-emoji">⏳</div>
+    <h2>En attente...</h2>
+    <div class="code-box">
+      <div class="lbl">Code à partager</div>
+      <div class="code-val" id="lobbyCode">------</div>
+    </div>
+    <button class="btn btn-s" onclick="copyCode()" id="copyBtn">📋 Copier le code</button>
+    <div class="wait-box">
+      <div><span class="dot"></span><span style="font-size:15px;font-weight:800;color:white;">En attente de ton complice...</span></div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:6px;">La partie démarre automatiquement</div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: QUIZ ══ -->
+  <div class="screen" id="sQuiz">
+    <div>
+      <div class="bar-wrap"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+      <div class="q-ctr" id="qCtr">1 / 10</div>
+    </div>
+    <div class="q-cat" id="qCat"></div>
+    <div class="q-box" id="qTxt"></div>
+    <div class="choices" id="choices"></div>
+    <button class="btn btn-p" id="nextBtn" onclick="nextQ()" disabled>Suivant →</button>
+  </div>
+
+  <!-- ══ SCREEN: WAITING RESULTS ══ -->
+  <div class="screen" id="sWait">
+    <div class="big-emoji">⌛</div>
+    <h2>Tu as fini !</h2>
+    <div class="wait-box">
+      <div><span class="dot"></span><span id="waitTxt" style="font-size:15px;font-weight:800;color:white;">En attente...</span></div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:6px;">Les résultats arrivent automatiquement</div>
+    </div>
+    <div class="info">✅ Tes réponses sont enregistrées<br>Patience, ça arrive !</div>
+  </div>
+
+  <!-- ══ SCREEN: RESULTS ══ -->
+  <div class="screen" id="sResults">
+    <div class="score-hero">
+      <div class="score-big" id="rScore">0/10</div>
+      <div class="score-sub" id="rSub">réponses identiques</div>
+      <div class="score-verd" id="rVerd">🤔</div>
+    </div>
+    <div class="tabs">
+      <button class="tab on" id="tabA" onclick="showTab('scores')">📊 Scores</button>
+      <button class="tab" id="tabB" onclick="showTab('answers')">👀 Réponses</button>
+    </div>
+    <!-- Scores tab -->
+    <div id="tabScores">
+      <div class="scores-grid">
+        <div class="score-card">
+          <div class="lbl" id="p1Lbl">Toi</div>
+          <div class="val" id="p1Sc">-</div>
+          <div class="sub">bonnes réponses</div>
+        </div>
+        <div class="score-card">
+          <div class="lbl" id="p2Lbl">Complice</div>
+          <div class="val" id="p2Sc">-</div>
+          <div class="sub">bonnes réponses</div>
+        </div>
+      </div>
+      <div class="info">👆 Clique "Réponses" pour voir ce que chacun a coché !</div>
+    </div>
+    <!-- Answers tab -->
+    <div id="tabAnswers" style="display:none">
+      <div class="cmp-header">
+        <div class="cmp-col" id="cmpA">Toi</div>
+        <div style="width:22px"></div>
+        <div class="cmp-col" id="cmpB">Complice</div>
+      </div>
+      <div class="cmp-list" id="cmpList"></div>
+    </div>
+    <button class="btn btn-p" onclick="playAgain()">🔄 Rejouer</button>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ══════════════════════════════
+// 200+ QUESTIONS
+// ══════════════════════════════
+const ALL_Q = [
+  // PERSO
+  {q:"Tu es plutôt...",a:["Lève-tôt 🌅","Couche-tard 🌙"],cat:"Perso"},
+  {q:"Tu gères mieux...",a:["Le froid 🥶","La chaleur 🥵"],cat:"Perso"},
+  {q:"En soirée tu es...",a:["L'âme de la fête 🎉","Plutôt discret(e) 🤫"],cat:"Perso"},
+  {q:"Tu es plus...",a:["Organisé(e) 📅","Improvisateur(rice) 🎲"],cat:"Perso"},
+  {q:"Ton humeur le matin...",a:["De bonne humeur ☀️","Grognon(ne) 😤"],cat:"Perso"},
+  {q:"Tu es plus...",a:["Optimiste 😊","Réaliste 🤔"],cat:"Perso"},
+  {q:"Tu prends des décisions...",a:["Avec la tête 🧠","Avec le cœur ❤️"],cat:"Perso"},
+  {q:"Tu es plutôt...",a:["Têtu(e) 🐂","Flexible 🤸"],cat:"Perso"},
+  {q:"Tu parles...",a:["Trop 🗣️","Pas assez 🤐"],cat:"Perso"},
+  {q:"Tu es plus...",a:["Solitaire 🦉","Sociable 🦋"],cat:"Perso"},
+  {q:"Face à un problème tu...",a:["Cherches seul(e) 🔍","Demandes de l'aide 🙋"],cat:"Perso"},
+  {q:"Tu es plus...",a:["Jaloux(se) 😒","Confiant(e) 😌"],cat:"Perso"},
+  {q:"Tu exprimes tes émotions...",a:["Facilement 😭","Difficilement 😶"],cat:"Perso"},
+  {q:"Tu es plus...",a:["Curieux(se) 🔬","Routinier(ère) 🔁"],cat:"Perso"},
+  {q:"Tu gardes rancune...",a:["Longtemps 😠","Pas du tout 😇"],cat:"Perso"},
+  {q:"Tu es plutôt...",a:["Perfectionniste ✨","Approximatif(ve) 🤷"],cat:"Perso"},
+  {q:"Quand tu es stressé(e)...",a:["Tu t'isoles 🙈","Tu cherches du monde 🤗"],cat:"Perso"},
+  {q:"Tu fais confiance...",a:["Rapidement 🤝","Très lentement ⏳"],cat:"Perso"},
+  // HABITUDES
+  {q:"Tu consultes ton téléphone...",a:["Dès le réveil 📱","Après t'être levé(e) 🚿"],cat:"Habitudes"},
+  {q:"Tu manges...",a:["Lentement 🐢","Rapidement ⚡"],cat:"Habitudes"},
+  {q:"Tu ranges ta chambre...",a:["Souvent 🧹","Rarement 😅"],cat:"Habitudes"},
+  {q:"Tu lis les messages...",a:["Sans répondre de suite 👀","Tu réponds direct 💬"],cat:"Habitudes"},
+  {q:"Tu arrives plutôt...",a:["En avance ⏰","En retard 😬"],cat:"Habitudes"},
+  {q:"Tu dors...",a:["Sur le dos 🫡","Sur le côté/ventre 🤸"],cat:"Habitudes"},
+  {q:"Tu regardes les films...",a:["En V.O. 🌍","En V.F. 🇫🇷"],cat:"Habitudes"},
+  {q:"Tu écoutes de la musique...",a:["Tout le temps 🎧","De temps en temps 🎵"],cat:"Habitudes"},
+  {q:"Tu fais du sport...",a:["Régulièrement 💪","Jamais / rarement 🛋️"],cat:"Habitudes"},
+  {q:"Tu prends ta douche...",a:["Le matin 🌅","Le soir 🌙"],cat:"Habitudes"},
+  {q:"Tu achètes des choses...",a:["Sur un coup de tête 💸","Après réflexion 🤔"],cat:"Habitudes"},
+  {q:"Tu bois...",a:["Beaucoup d'eau 💧","Pas assez 😅"],cat:"Habitudes"},
+  {q:"Tu finis les choses...",a:["Jusqu'au bout ✅","À moitié souvent 🤷"],cat:"Habitudes"},
+  {q:"Le matin tu...",a:["Manges un vrai petit-déj 🍳","Sautes le repas ☕"],cat:"Habitudes"},
+  {q:"Tu laves tes dents...",a:["2x par jour minimum 🦷","Pas toujours 😬"],cat:"Habitudes"},
+  // FOOD
+  {q:"Tu préfères...",a:["Sucré 🍰","Salé 🧂"],cat:"Food"},
+  {q:"Ton petit-déj idéal...",a:["Continental 🥐","Copieux 🍳"],cat:"Food"},
+  {q:"Tu préfères...",a:["Les pâtes 🍝","Le riz 🍚"],cat:"Food"},
+  {q:"Snack préféré...",a:["Chips 🥔","Bonbons 🍬"],cat:"Food"},
+  {q:"Tu préfères...",a:["Cuisiner 👨‍🍳","Commander/resto 🛵"],cat:"Food"},
+  {q:"Glace préférée...",a:["Chocolat 🍫","Vanille/fraise 🍓"],cat:"Food"},
+  {q:"Tu manges épicé...",a:["Oui j'adore 🌶️","Non surtout pas 😤"],cat:"Food"},
+  {q:"Burger ou tacos ?",a:["Burger 🍔","Tacos 🌮"],cat:"Food"},
+  {q:"Tu aimes les sushis...",a:["Trop j'adore 🍣","Bof pas trop 😶"],cat:"Food"},
+  {q:"Pizza préférée...",a:["Margherita classique 🍕","Garnie max 🍕🍕"],cat:"Food"},
+  {q:"Café ou thé ?",a:["Café ☕","Thé 🍵"],cat:"Food"},
+  {q:"Tu aimes les légumes...",a:["Oui j'adore 🥦","Bof à peine 😬"],cat:"Food"},
+  {q:"Viande ou poisson ?",a:["Viande 🥩","Poisson 🐟"],cat:"Food"},
+  {q:"Chocolat noir ou au lait ?",a:["Chocolat noir 🍫","Chocolat au lait 🍫"],cat:"Food"},
+  {q:"Crêpes ou gaufres ?",a:["Crêpes 🥞","Gaufres 🧇"],cat:"Food"},
+  {q:"Eau pétillante ou plate ?",a:["Pétillante 💧","Plate 💧"],cat:"Food"},
+  // DIVERTISSEMENT
+  {q:"Tu regardes plutôt...",a:["Séries 📺","Films 🎬"],cat:"Divertissement"},
+  {q:"Tu joues aux jeux vidéo...",a:["Souvent 🎮","Rarement/jamais 👾"],cat:"Divertissement"},
+  {q:"Soirée idéale...",a:["Sortir/ciné 🎬","Film à la maison 🛋️"],cat:"Divertissement"},
+  {q:"Tu danses...",a:["Dès que la musique joue 💃","Non jamais 😅"],cat:"Divertissement"},
+  {q:"Vacances idéales...",a:["Plage 🏖️","Montagne/ville 🏔️"],cat:"Divertissement"},
+  {q:"Le week-end tu préfères...",a:["Sortir voir des gens 🎉","Rester te reposer 🛋️"],cat:"Divertissement"},
+  {q:"Genre de films préféré...",a:["Action/aventure 💥","Comédie/romance 😂❤️"],cat:"Divertissement"},
+  {q:"Tu vas au concert...",a:["Souvent j'adore 🎶","Rarement 🤷"],cat:"Divertissement"},
+  {q:"Tu scrolles sur...",a:["Instagram 📸","TikTok 🎵"],cat:"Divertissement"},
+  {q:"Tu lis...",a:["Régulièrement 📚","Rarement 😅"],cat:"Divertissement"},
+  {q:"Tu écoutes des podcasts...",a:["Oui souvent 🎙️","Non jamais 🙅"],cat:"Divertissement"},
+  {q:"Tu préfères...",a:["La piscine 🏊","La mer 🌊"],cat:"Divertissement"},
+  {q:"Jeu préféré...",a:["Jeux de société 🎲","Jeux vidéo 🕹️"],cat:"Divertissement"},
+  {q:"Netflix ou YouTube ?",a:["Netflix 🎬","YouTube/TikTok 📱"],cat:"Divertissement"},
+  {q:"Musique préférée...",a:["Rap/R&B 🎤","Pop/variété 🎵"],cat:"Divertissement"},
+  {q:"Tu aimes l'horreur ?",a:["Oui j'adore 😱","Non trop peur 😨"],cat:"Divertissement"},
+  // RELATIONS
+  {q:"Tu as...",a:["Beaucoup d'amis 👥","Peu d'amis proches 💎"],cat:"Relations"},
+  {q:"Tu préfères communiquer...",a:["Par messages 💬","Par appels 📞"],cat:"Relations"},
+  {q:"En amitié tu es...",a:["Le/la protecteur(rice) 🛡️","Le/la fun 😄"],cat:"Relations"},
+  {q:"Quand tu es en colère tu...",a:["T'enfermes 🤐","Tu l'exprimes 😤"],cat:"Relations"},
+  {q:"Tu dis 'je t'aime'...",a:["Facilement ❤️","Difficilement 😶"],cat:"Relations"},
+  {q:"Tu es du genre...",a:["À pardonner vite 😇","À tenir rancune 😒"],cat:"Relations"},
+  {q:"Tu préfères...",a:["Les sorties en groupe 👥","Le tête-à-tête 👫"],cat:"Relations"},
+  {q:"Tu montres de l'affection...",a:["Par des câlins 🤗","Par des mots 💬"],cat:"Relations"},
+  {q:"Tu gardes contact avec les anciens amis...",a:["Oui souvent 📱","Non pas vraiment 🙅"],cat:"Relations"},
+  {q:"Quand un ami a besoin tu...",a:["Es toujours là 🏃","Ça dépend 🤷"],cat:"Relations"},
+  {q:"En couple tu es...",a:["Très attentionné(e) 💐","Plutôt indépendant(e) 🦅"],cat:"Relations"},
+  {q:"Tu préfères un(e) ami(e) qui...",a:["Te dit la vérité 🔥","Te soutient toujours 🤗"],cat:"Relations"},
+  {q:"Tu exprimes mieux par...",a:["Les mots 💬","Les actes 🎁"],cat:"Relations"},
+  {q:"Tu préfères une dispute...",a:["Réglée de suite ⚡","Après qu'on se calme 🌊"],cat:"Relations"},
+  // TRAVAIL
+  {q:"Tu travailles/étudies...",a:["Tôt le matin ☀️","Tard la nuit 🌙"],cat:"Travail"},
+  {q:"Tu révises/travailles...",a:["À l'avance 📅","À la dernière minute ⏰"],cat:"Travail"},
+  {q:"Tu préfères travailler...",a:["Seul(e) 🧘","En groupe 👥"],cat:"Travail"},
+  {q:"Face à un travail dur tu...",a:["T'accroches ✊","Abandonnes facilement 😮‍💨"],cat:"Travail"},
+  {q:"Tu es ambitieux(se)...",a:["Oui très 🚀","Moyennement 🤷"],cat:"Travail"},
+  {q:"Tu préfères...",a:["Un boulot créatif 🎨","Un boulot stable 🏛️"],cat:"Travail"},
+  {q:"Tu gères le stress...",a:["Bien 😌","Difficilement 😰"],cat:"Travail"},
+  {q:"Tu demandes de l'aide quand tu bloques...",a:["Oui direct 🙋","Non je me débrouille 💪"],cat:"Travail"},
+  {q:"Tu es en classe/boulot...",a:["Sérieux(se) 📚","Distrait(e) 😂"],cat:"Travail"},
+  // ARGENT
+  {q:"Tu es plutôt...",a:["Dépensier(ère) 💸","Économe 🏦"],cat:"Argent"},
+  {q:"Tu gardes de l'argent de côté...",a:["Oui toujours 💰","Rarement 😅"],cat:"Argent"},
+  {q:"Face à une promo tu...",a:["Achètes direct 🛍️","Résistes facilement 💪"],cat:"Argent"},
+  {q:"L'argent pour toi c'est...",a:["La liberté 🦅","La sécurité 🛡️"],cat:"Argent"},
+  {q:"Tu prêtes de l'argent...",a:["Oui sans problème 🤝","Ça me stresse 😬"],cat:"Argent"},
+  // STYLE
+  {q:"Tu te soignes...",a:["Beaucoup j'aime ça 💄","Minimum 😎"],cat:"Style"},
+  {q:"Ton style c'est...",a:["Casual/streetwear 👟","Soigné/stylé 👔"],cat:"Style"},
+  {q:"Tu dépenses en fringues...",a:["Beaucoup 🛍️","Peu 😌"],cat:"Style"},
+  {q:"Tu regardes dans les miroirs...",a:["Souvent 😏","À peine 🙈"],cat:"Style"},
+  {q:"Tes cheveux le matin...",a:["Coiffés, tu prends le temps 💆","Freestyle naturel 💁"],cat:"Style"},
+  {q:"Tu te parfumes...",a:["Tous les jours 🌸","De temps en temps 🤷"],cat:"Style"},
+  // TECH
+  {q:"Ton téléphone c'est...",a:["iPhone 🍎","Android 🤖"],cat:"Tech"},
+  {q:"Face à un bug tu...",a:["Cherches à le régler 🔧","Demandes de l'aide direct 🙋"],cat:"Tech"},
+  {q:"Tu maîtrises la techno...",a:["Oui geek 🤓","À peine 😅"],cat:"Tech"},
+  {q:"Tu écoutes de la musique via...",a:["Spotify/Apple Music 🎵","YouTube 📹"],cat:"Tech"},
+  {q:"Tes photos sont sauvegardées...",a:["Oui toujours 💾","Non jamais 🤞"],cat:"Tech"},
+  // DEEP
+  {q:"Tu as peur de...",a:["L'échec 📉","La solitude 💔"],cat:"Deep"},
+  {q:"Ce qui te rend heureux(se)...",a:["Les petites choses 🌸","Les grandes aventures 🌍"],cat:"Deep"},
+  {q:"Ton plus grand défaut...",a:["La procrastination 😴","L'impatience ⚡"],cat:"Deep"},
+  {q:"Tu penses souvent à...",a:["Le passé 🕰️","L'avenir 🔭"],cat:"Deep"},
+  {q:"Tu es plus...",a:["Cœur 💜","Raison 🧠"],cat:"Deep"},
+  {q:"Le bonheur pour toi...",a:["La famille/les proches 👨‍👩‍👧","La liberté 🌍"],cat:"Deep"},
+  {q:"Face à l'adversité tu...",a:["Te bats 🥊","Acceptes et t'adaptes 🌊"],cat:"Deep"},
+  {q:"Tu changes d'avis...",a:["Facilement 🔄","Difficilement 🪨"],cat:"Deep"},
+  {q:"Ce dont tu es le plus fier(ère)...",a:["Tes qualités humaines ❤️","Tes réussites 🏆"],cat:"Deep"},
+  {q:"La vie c'est...",a:["Une aventure à fond 🔥","Un chemin à construire 🌱"],cat:"Deep"},
+  // FUN
+  {q:"Superpower préféré...",a:["Voler 🦅","Être invisible 👻"],cat:"Fun"},
+  {q:"Tu préfères...",a:["Gagner 🏆","Apprendre de tes erreurs 📚"],cat:"Fun"},
+  {q:"Si tu gagnais au loto tu...",a:["Voyages direct ✈️","Investis/économises 💰"],cat:"Fun"},
+  {q:"Tu préfères...",a:["Être célèbre 🌟","Être riche 💎"],cat:"Fun"},
+  {q:"Tu préfères...",a:["Les chiens 🐶","Les chats 🐱"],cat:"Fun"},
+  {q:"Tu aimes les surprises...",a:["Oui j'adore 🎁","Non pas trop 😅"],cat:"Fun"},
+  {q:"Tu ris facilement...",a:["Oui tout le temps 😂","Pas vraiment 😐"],cat:"Fun"},
+  {q:"Si t'étais un animal...",a:["Lion/loup 🦁","Dauphin/renard 🦊"],cat:"Fun"},
+  {q:"Tu survivrais mieux...",a:["Dans la préhistoire 🦕","Dans le futur 🚀"],cat:"Fun"},
+  {q:"Seul(e) sur une île tu emportes...",a:["Un outil/couteau 🔪","Un livre/musique 📚"],cat:"Fun"},
+  {q:"Tu préfères...",a:["Avoir toujours raison 😏","Être heureux(se) 😊"],cat:"Fun"},
+  {q:"Tu préfères...",a:["Parler 🗣️","Écouter 👂"],cat:"Fun"},
+  {q:"Ton talent caché c'est...",a:["Le sport/physique 🏃","L'art/créativité 🎨"],cat:"Fun"},
+  {q:"Plage ou campagne ?",a:["Plage 🏖️","Campagne 🌿"],cat:"Fun"},
+  {q:"Nuit ou jour ?",a:["Nuit 🌙","Jour ☀️"],cat:"Fun"},
+  {q:"Été ou hiver ?",a:["Été ☀️","Hiver ❄️"],cat:"Fun"},
+  {q:"Tu préfères...",a:["Être trop chaud(e) 🥵","Avoir trop froid 🥶"],cat:"Fun"},
+  {q:"Tu préfères un voyage...",a:["Organisé ✈️","Improvisé 🎲"],cat:"Fun"},
+  {q:"Plutôt...",a:["Nager 🏊","Courir 🏃"],cat:"Fun"},
+];
+
+// ══════════════════════════════
+// STATE
+// ══════════════════════════════
+let db = null;
+let FB_URL = '';
+let state = {
+  code:'', myName:'', role:'', // host | guest
+  questions:[], currentQ:0, myAnswers:[],
+  otherName:'', totalQ:10,
+  unsubscribe: null,
+};
+
+// ══════════════════════════════
+// FIREBASE HELPERS
+// ══════════════════════════════
+function roomRef(code) {
+  return ref(db, 'rooms/' + code);
+}
+
+async function fbGet(code) {
+  const snap = await get(roomRef(code));
+  return snap.exists() ? snap.val() : null;
+}
+
+async function fbSet(code, data) {
+  await set(roomRef(code), data);
+}
+
+async function fbUpdate(code, data) {
+  await update(roomRef(code), data);
+}
+
+function fbListen(code, cb) {
+  return onValue(roomRef(code), snap => {
+    cb(snap.exists() ? snap.val() : null);
+  });
+}
+
+// ══════════════════════════════
+// CONFIG
+// ══════════════════════════════
+function loadConfig() {
+  try { return localStorage.getItem('dc_fb_url') || ''; } catch(e){ return ''; }
+}
+function saveConfigToLS(url) {
+  try { localStorage.setItem('dc_fb_url', url); } catch(e){}
+}
+
+function initFirebase(url) {
+  const app = initializeApp({ databaseURL: url }, 'dc-' + Date.now());
+  db = getDatabase(app);
+}
+
+window.saveConfig = function() {
+  let url = document.getElementById('fbUrl').value.trim().replace(/\/$/, '');
+  if(!url.startsWith('https://') || !url.includes('firebaseio.com')) {
+    document.getElementById('configErr').textContent = '❌ URL invalide. Elle doit commencer par https:// et finir par .firebaseio.com';
+    document.getElementById('configErr').style.display = 'block';
+    return;
+  }
+  saveConfigToLS(url);
+  FB_URL = url;
+  initFirebase(url);
+  document.getElementById('configErr').style.display = 'none';
+  go('sHome');
+};
+
+// ══════════════════════════════
+// NAV
+// ══════════════════════════════
+window.go = function(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+};
+
+// ══════════════════════════════
+// UTILS
+// ══════════════════════════════
+function genCode() {
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i=0;i<6;i++) s += c[Math.floor(Math.random()*c.length)];
+  return s;
+}
+function shuffle(arr) {
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  if(el){ el.textContent = msg; el.style.display = 'block'; }
+}
+function hideErr(id){ const el=document.getElementById(id); if(el) el.style.display='none'; }
+
+// ══════════════════════════════
+// CREATE GAME
+// ══════════════════════════════
+window.createGame = async function() {
+  hideErr('createErr');
+  const name = document.getElementById('createName').value.trim();
+  if(!name){ showErr('createErr','Entre ton prénom !'); return; }
+  const n = parseInt(document.getElementById('qCount').value);
+
+  state.myName = name;
+  state.role = 'host';
+  state.totalQ = n;
+  state.questions = shuffle(ALL_Q).slice(0, n);
+  state.code = genCode();
+  state.myAnswers = [];
+  state.currentQ = 0;
+
+  try {
+    await fbSet(state.code, {
+      code: state.code,
+      hostName: name,
+      guestName: '',
+      questions: state.questions,
+      hostAnswers: null,
+      guestAnswers: null,
+      status: 'waiting',
+      created: Date.now()
+    });
+  } catch(e) {
+    showErr('createErr', '❌ Erreur Firebase : ' + e.message + '. Vérifie ton URL et les règles de la DB.');
+    return;
+  }
+
+  document.getElementById('lobbyCode').textContent = state.code;
+  document.getElementById('roomBadge').textContent = state.code;
+  document.getElementById('roomBadge').style.display = '';
+  go('sLobby');
+
+  // Listen for guest joining
+  if(state.unsubscribe) state.unsubscribe();
+  state.unsubscribe = fbListen(state.code, room => {
+    if(room && room.guestName && room.status === 'playing') {
+      if(state.unsubscribe) { state.unsubscribe(); state.unsubscribe = null; }
+      state.otherName = room.guestName;
+      startQuiz();
+    }
+  });
+};
+
+window.copyCode = function() {
+  navigator.clipboard.writeText(state.code).then(() => {
+    document.getElementById('copyBtn').textContent = '✅ Copié !';
+    setTimeout(() => document.getElementById('copyBtn').textContent = '📋 Copier le code', 2000);
+  }).catch(() => alert('Code : ' + state.code));
+};
+
+// ══════════════════════════════
+// JOIN GAME
+// ══════════════════════════════
+window.joinGame = async function() {
+  hideErr('joinErr');
+  const name = document.getElementById('joinName').value.trim();
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  if(!name){ showErr('joinErr','Entre ton prénom !'); return; }
+  if(code.length < 4){ showErr('joinErr','Entre le code de la partie !'); return; }
+
+  let room;
+  try {
+    room = await fbGet(code);
+  } catch(e) {
+    showErr('joinErr', '❌ Erreur Firebase : ' + e.message);
+    return;
+  }
+
+  if(!room){ showErr('joinErr','❌ Partie introuvable ! Vérifie le code.'); return; }
+  if(room.status !== 'waiting'){ showErr('joinErr','❌ Cette partie a déjà commencé.'); return; }
+
+  state.myName = name;
+  state.role = 'guest';
+  state.code = code;
+  state.questions = room.questions;
+  state.totalQ = room.questions.length;
+  state.myAnswers = [];
+  state.currentQ = 0;
+  state.otherName = room.hostName;
+
+  await fbUpdate(code, { guestName: name, status: 'playing' });
+
+  document.getElementById('roomBadge').textContent = code;
+  document.getElementById('roomBadge').style.display = '';
+  startQuiz();
+};
+
+// ══════════════════════════════
+// QUIZ
+// ══════════════════════════════
+let selAns = null;
+
+function startQuiz() {
+  state.currentQ = 0;
+  state.myAnswers = [];
+  go('sQuiz');
+  renderQ();
+}
+
+function renderQ() {
+  const q = state.questions[state.currentQ];
+  const pct = (state.currentQ / state.totalQ) * 100;
+  document.getElementById('barFill').style.width = pct + '%';
+  document.getElementById('qCtr').textContent = `Question ${state.currentQ+1} / ${state.totalQ}`;
+  document.getElementById('qCat').textContent = q.cat;
+  document.getElementById('qTxt').textContent = q.q;
+  const box = document.getElementById('choices');
+  box.innerHTML = '';
+  q.a.forEach((ans, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.textContent = ans;
+    btn.onclick = () => { document.querySelectorAll('.choice').forEach(b=>b.classList.remove('sel')); btn.classList.add('sel'); selAns=i; document.getElementById('nextBtn').disabled=false; };
+    box.appendChild(btn);
+  });
+  selAns = null;
+  document.getElementById('nextBtn').disabled = true;
+}
+
+window.nextQ = function() {
+  if(selAns === null) return;
+  state.myAnswers.push(selAns);
+  selAns = null;
+  state.currentQ++;
+  if(state.currentQ < state.totalQ) {
+    renderQ();
+  } else {
+    submitAnswers();
+  }
+};
+
+// ══════════════════════════════
+// SUBMIT & WAIT
+// ══════════════════════════════
+async function submitAnswers() {
+  const isHost = state.role === 'host';
+  const room = await fbGet(state.code);
+
+  const updates = isHost
+    ? { hostAnswers: state.myAnswers, status: room.guestAnswers ? 'done' : 'host_done' }
+    : { guestAnswers: state.myAnswers, status: room.hostAnswers ? 'done' : 'guest_done' };
+
+  await fbUpdate(state.code, updates);
+
+  const fresh = await fbGet(state.code);
+  if(fresh.status === 'done') {
+    showResults(fresh);
+  } else {
+    document.getElementById('waitTxt').textContent = `En attente que ${state.otherName} termine...`;
+    go('sWait');
+    if(state.unsubscribe) state.unsubscribe();
+    state.unsubscribe = fbListen(state.code, r => {
+      if(r && r.status === 'done') {
+        if(state.unsubscribe){ state.unsubscribe(); state.unsubscribe=null; }
+        showResults(r);
+      }
+    });
+  }
+}
+
+// ══════════════════════════════
+// RESULTS
+// ══════════════════════════════
+function showResults(room) {
+  const myAns   = state.role === 'host' ? room.hostAnswers : room.guestAnswers;
+  const otherAns= state.role === 'host' ? room.guestAnswers : room.hostAnswers;
+  const otherNm = state.role === 'host' ? room.guestName : room.hostName;
+  const questions= room.questions;
+  const total = questions.length;
+
+  let matches = 0;
+  questions.forEach((_, i) => { if(myAns[i] === otherAns[i]) matches++; });
+  const pct = Math.round((matches / total) * 100);
+
+  let verdict = pct >= 90 ? '🔥 Vous êtes des âmes sœurs !'
+    : pct >= 70 ? '💪 Vous vous connaissez super bien !'
+    : pct >= 50 ? '😊 Pas mal, vous vous connaissez bien !'
+    : pct >= 30 ? '🤔 Il reste des choses à découvrir...'
+    : '😅 Vous avez encore beaucoup à apprendre l\'un sur l\'autre !';
+
+  document.getElementById('rScore').textContent = `${matches}/${total}`;
+  document.getElementById('rSub').textContent   = `réponses identiques (${pct}%)`;
+  document.getElementById('rVerd').textContent  = verdict;
+  document.getElementById('p1Lbl').textContent  = state.myName;
+  document.getElementById('p2Lbl').textContent  = otherNm;
+  document.getElementById('p1Sc').textContent   = matches;
+  document.getElementById('p2Sc').textContent   = matches;
+  document.getElementById('cmpA').textContent   = state.myName;
+  document.getElementById('cmpB').textContent   = otherNm;
+
+  // Build compare list
+  const list = document.getElementById('cmpList');
+  list.innerHTML = '';
+  questions.forEach((q, i) => {
+    const ok = myAns[i] === otherAns[i];
+    const el = document.createElement('div');
+    el.className = 'cmp-item';
+    el.innerHTML = `<div class="cmp-q">${q.q}</div>
+      <div class="cmp-row">
+        <div class="cmp-ans ${ok?'ok':'no'}">${q.a[myAns[i]]}</div>
+        <div class="cmp-icon">${ok?'✅':'❌'}</div>
+        <div class="cmp-ans ${ok?'ok':'no'}">${q.a[otherAns[i]]}</div>
+      </div>`;
+    list.appendChild(el);
+  });
+
+  go('sResults');
+}
+
+window.showTab = function(t) {
+  document.getElementById('tabScores').style.display  = t==='scores'  ? 'flex' : 'none';
+  document.getElementById('tabAnswers').style.display = t==='answers' ? 'block': 'none';
+  if(t==='scores'){ document.getElementById('tabScores').style.flexDirection='column'; document.getElementById('tabScores').style.gap='10px'; }
+  document.getElementById('tabA').classList.toggle('on', t==='scores');
+  document.getElementById('tabB').classList.toggle('on', t==='answers');
+};
+
+window.playAgain = function() {
+  if(state.unsubscribe){ state.unsubscribe(); state.unsubscribe=null; }
+  document.getElementById('roomBadge').style.display='none';
+  state = { code:'', myName:'', role:'', questions:[], currentQ:0, myAnswers:[], otherName:'', totalQ:10, unsubscribe:null };
+  go('sHome');
+};
+
+// ══════════════════════════════
+// INIT
+// ══════════════════════════════
+(function init() {
+  // URL Firebase intégrée directement
+  FB_URL = 'https://duel-complices-1-default-rtdb.firebaseio.com';
+  initFirebase(FB_URL);
+  go('sHome');
+  // Fix tabScores initial display
+  document.getElementById('tabScores').style.display = 'flex';
+  document.getElementById('tabScores').style.flexDirection = 'column';
+  document.getElementById('tabScores').style.gap = '10px';
+})();
+</script>
+</body>
+</html>
